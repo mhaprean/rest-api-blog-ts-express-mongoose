@@ -10,13 +10,15 @@ const connectDB = async () => {
   try {
     await mongoose.connect(process.env.MONGO_DB_URL);
     console.log('MongoDB connected');
+
+    app.listen(process.env.PORT || 3000, async () => {
+      console.log('application started');
+      await connectDB();
+    });
   } catch (err) {
     console.log('err: ', err);
     process.exit(1);
   }
 };
 
-app.listen(process.env.PORT || 3000, async () => {
-  console.log('application started');
-  await connectDB();
-});
+connectDB();
