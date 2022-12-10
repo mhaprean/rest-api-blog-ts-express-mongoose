@@ -9,8 +9,8 @@ export interface IUser {
   subscribers: number;
   subscribedUsers: string[];
   discordUser: boolean;
-  createdAt: string;
-  updatedAt: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface IUserModel extends IUser, Document {};

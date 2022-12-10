@@ -12,7 +12,7 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
     await newUser.save();
     return res.status(200).json({ success: 'User has been created!', user: newUser });
   } catch (err) {
-    next(err);
+    return res.status(400).json({ err });
   }
 };
 
@@ -25,17 +25,16 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
 
     if (!isCorrect) return res.status(400).json('Wrong Credentials!');
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || 'jwt_secret', {
+    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET || 'jwt_secret', {
       expiresIn: '1d',
     });
-    const { password, ...others } = (user as any)._doc as IUser;
 
     return res
       .cookie('access_token', token, {
         httpOnly: true,
       })
       .status(200)
-      .json({ user: others, access_token: token });
+      .json({ access_token: token });
   } catch (err) {
     next(err);
   }
@@ -44,9 +43,9 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
 export const profile = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = req.userId;
-    const user = await User.findById(id).select({"password": 0});
+    const user = await User.findById(id).select({ password: 0 });
 
-    return res.status(200).json({profile: user});
+    return res.status(200).json({ profile: user });
   } catch (error) {
     next(error);
   }
