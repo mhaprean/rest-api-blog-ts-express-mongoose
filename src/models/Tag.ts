@@ -1,23 +1,19 @@
 import mongoose, { Document, Model } from 'mongoose';
 
-export interface ICategory {
+export interface ITag {
   title: string;
   image?: string;
   createdAt?: Date;
   updatedAt?: Date;
-  articles: string[];
 }
 
-export interface ICategoryModel extends ICategory, Document {}
+export interface ITagModel extends ITag, Document {}
 
-const categorySchema = new mongoose.Schema(
+const tagSchema = new mongoose.Schema(
   {
     title: {
       type: String,
       required: true,
-    },
-    image: {
-      type: String,
     },
     articles: [
       {
@@ -29,4 +25,4 @@ const categorySchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-export default mongoose.model<ICategoryModel>('Category', categorySchema);
+export default mongoose.model<ITagModel>('Tag', tagSchema);

@@ -8,6 +8,8 @@ export interface IArticle {
   user: IUserModel['_id'];
   createdAt?: Date;
   updatedAt?: Date;
+  tags: string[];
+  category: string;
 }
 
 export interface IArticleModel extends IArticle, Document {}
@@ -29,6 +31,17 @@ const articleSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
     },
+    category: {
+      type: mongoose.Types.ObjectId,
+      ref: 'Category',
+    },
+    tags: [
+      {
+        type: mongoose.Types.ObjectId,
+        ref: 'Tag',
+        default: [],
+      },
+    ],
   },
   { timestamps: true }
 );

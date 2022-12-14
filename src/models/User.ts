@@ -13,7 +13,7 @@ export interface IUser {
   updatedAt: Date;
 }
 
-export interface IUserModel extends IUser, Document {};
+export interface IUserModel extends IUser, Document {}
 
 const UserSchema = new mongoose.Schema(
   {
@@ -33,6 +33,11 @@ const UserSchema = new mongoose.Schema(
     },
     image: {
       type: String,
+    },
+    role: {
+      type: String,
+      enum: ['user', 'editor', 'admin'],
+      default: 'user',
     },
     subscribers: {
       type: Number,
