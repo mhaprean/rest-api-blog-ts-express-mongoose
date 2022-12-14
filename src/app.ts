@@ -10,6 +10,7 @@ import userRoutes from './routes/userRoutes';
 import articleRoutes from './routes/articleRoutes';
 import fileUpload, { UploadedFile } from 'express-fileupload';
 import fs from 'fs';
+import categoryRoutes from './routes/categoryRoutes';
 
 const app = express();
 dotenv.config();
@@ -30,6 +31,7 @@ app.use(fileUpload());
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/articles', articleRoutes);
+app.use('/api/categories', categoryRoutes);
 
 app.get('/', (req, res) => {
   return res.send('welcome to blog rest api.');
