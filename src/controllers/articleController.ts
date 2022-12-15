@@ -52,8 +52,8 @@ export const createArticle = async (
       return res.status(400).send(error);
     }
 
-    const { title, description, tags = [], category = null } = req.body;
-    const newArticle = { title, description, user: userId, tags, category };
+    const { title, description, tags = [], category = null, image } = req.body;
+    const newArticle = { title, description, user: userId, tags, category, image };
     const article = await Article.create(newArticle);
 
     const updateTags = await Tag.updateMany(

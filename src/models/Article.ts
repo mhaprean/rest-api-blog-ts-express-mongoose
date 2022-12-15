@@ -5,7 +5,7 @@ export interface IArticle {
   title: string;
   description: string;
   image?: string;
-  user: IUserModel['_id'];
+  user: string;
   createdAt?: Date;
   updatedAt?: Date;
   tags: string[];
