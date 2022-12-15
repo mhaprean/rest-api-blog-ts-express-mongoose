@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request } from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
@@ -14,6 +14,9 @@ import tagRoutes from './routes/tagRoutes';
 import path from 'path';
 import fs from 'fs';
 
+import multer from 'multer';
+import { s3Uploadv3 } from './services/s3service';
+
 const app = express();
 dotenv.config();
 
@@ -28,7 +31,7 @@ app.use(cookieParser());
 app.use(cors());
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-app.use(fileUpload());
+// app.use(fileUpload());
 
 // routes
 app.use('/api/auth', authRoutes);
@@ -41,16 +44,13 @@ app.get('/', (req, res) => {
   return res.send('welcome to blog rest api.');
 });
 
-
-
 // the image field must have the name "image"
+// this works fine on localhost but not on cyclic
 app.post('/api/upload', function async(req, res) {
-
   if (!req.files || Object.keys(req.files).length === 0) {
     return res.status(400).send('No files were uploaded.');
   } // The name of the input field (i.e. "sampleFile") is used to retrieve the uploaded file
   let sampleFile = req.files.image as UploadedFile;
-
 
   const dir = __dirname + '/uploads';
 
@@ -58,15 +58,47 @@ app.post('/api/upload', function async(req, res) {
   if (!fs.existsSync(dir)) {
     fs.mkdir(dir, 0o777, (err) => {
       console.log('could not create the folder: ', err);
-      res.status(500).send({'msg': 'could not create the folder', err});
+      res.status(500).send({ msg: 'could not create the folder', err });
     });
   }
 
-  const uploadPath = __dirname + '/uploads/' + sampleFile.name; // Use the mv() method to place the file somewhere on your server
+  const fileName = '/uploads/' + Date.now() + '_' + sampleFile.name;
+  const uploadPath = __dirname + fileName; // Use the mv() method to place the file somewhere on your server
   sampleFile.mv(uploadPath, function (err) {
     if (err) return res.status(500).send(err);
-    res.send({ ok: 'File uploaded!', file: sampleFile.name });
+    res.send({ ok: 'File uploaded!', file: fileName });
   });
+});
+
+
+
+
+// test aws upload using cyclic
+const storage = multer.memoryStorage();
+
+const fileFilter = (req: Request, file: any, cb: Function) => {
+  if (file.mimetype.split('/')[0] === 'image') {
+    cb(null, true);
+  } else {
+    cb(new multer.MulterError('LIMIT_UNEXPECTED_FILE'), false);
+  }
+};
+
+const upload = multer({
+  storage,
+  fileFilter,
+  limits: { fileSize: 1000000000, files: 2 },
+});
+
+app.post('/api/s3upload', upload.array('file'), async (req, res) => {
+  try {
+    console.log('!!!!!!!! ok', req.files);
+    const results = await s3Uploadv3(req.files as any);
+    console.log(results);
+    return res.json({ status: 'success' });
+  } catch (err) {
+    res.status(400).send({ msg: 'could not upload file', err });
+  }
 });
 
 export default app;
