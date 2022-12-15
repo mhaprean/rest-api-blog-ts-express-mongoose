@@ -1,8 +1,6 @@
-# rest-api-blog-ts-express-mongoose
 
-## BLOG REST API prototype
+# BLOG REST API prototype
 
----
 
 ### Built with
 * Express js
@@ -13,5 +11,7 @@
 
 ### Features
 
-* Users can register, login and read articles
-* User can like an article
+* users can register, login and read articles
+* logged in user can create and update articles
+* user can like an article
+

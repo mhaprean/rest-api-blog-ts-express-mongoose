@@ -122,16 +122,107 @@ export const likeArticle = async (
     }
 
     if (article.likes.includes(userId)) {
-      const removeLike = await article.updateOne({ $ull: { likes: userId } });
-      return res.status(200).json({ article, removeLike });
+      const removeLike = await article.updateOne({ $pull: { likes: userId } });
+      return res.status(200).json("Like removed from article");
     } else {
       const addLike = await article.updateOne({ $push: { likes: userId } });
-      return res.status(200).json({ article, addLike });
+      return res.status(200).json("Like added to article");
     }
-
   } catch (error) {
     return res.status(400).json(error);
   }
 };
 
-// TODO - create update logic for tags and category
+// returns the items from the first array that are not part of the second array.
+const difference = (arrA: string[], arrB: string[]) => {
+  const result = [];
+  for (const p of arrA) {
+    if (!arrB.includes(p)) {
+      result.push(p);
+    }
+  }
+
+  return result;
+};
+
+
+export const updateArticle = async (
+  req: Request<{ id: string }>,
+  res: Response,
+  next: NextFunction
+) => {
+  const id = req.params.id;
+
+  try {
+    const userId = req.userId;
+
+    const oldArticle = await Article.findById(id);
+
+    if (!oldArticle) {
+      return res.status(400).send('wrong article id');
+    }
+
+    const oldTags = oldArticle.tags;
+    const oldCategory = oldArticle.category;
+
+    const joiSchema = Joi.object({
+      title: Joi.string().min(3).max(60).required(),
+      description: Joi.string().min(3).required(),
+      image: Joi.string(),
+      imageThumb: Joi.string(),
+      tags: Joi.array().items(Joi.string().hex().length(24)),
+      likes: Joi.array().items(Joi.string().hex().length(24)),
+      category: Joi.string().hex().length(24),
+      user: Joi.string().hex().length(24),
+    });
+
+    const { error } = joiSchema.validate(req.body);
+
+    if (error) {
+      return res.status(400).send(error);
+    }
+
+    const {
+      title,
+      description,
+      tags,
+      category,
+      image,
+      imageThumb,
+      user,
+    } = req.body;
+    const newArticle = { title, description, user, tags, category, image, imageThumb };
+
+    Object.assign(oldArticle, newArticle);
+
+    const updatedArticle = await oldArticle.save();
+
+    const addedTags = difference(newArticle.tags, oldTags);
+    const removedTags = difference(oldTags, newArticle.tags);
+
+    const addTags = await Tag.updateMany(
+      { _id: addedTags },
+      { $push: { articles: updatedArticle._id } }
+    );
+
+    const removeTags = await Tag.updateMany(
+      { _id: removedTags },
+      { $pull: { articles: updatedArticle._id } }
+    );
+
+    if (oldCategory !== newArticle.category) {
+
+      const removeArticleFromOldCategory = await Category.findByIdAndUpdate(oldCategory, {
+        $pull: { articles: updatedArticle._id },
+      });
+
+      const addArticleToNewCategory = await Category.findByIdAndUpdate(newArticle.category, {
+        $push: { articles: updatedArticle._id },
+      });
+    }
+
+    return res.status(201).json(updatedArticle);
+  } catch (error) {
+    return res.status(400).json(error);
+  }
+};
