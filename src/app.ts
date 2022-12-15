@@ -15,7 +15,8 @@ import path from 'path';
 import fs from 'fs';
 
 import multer from 'multer';
-import { s3GetFile, s3Uploadv3 } from './services/s3service';
+// import { s3GetFile, s3Uploadv3 } from './services/s3service';
+import { multerUpload } from './services/s3';
 
 const app = express();
 dotenv.config();
@@ -72,43 +73,63 @@ app.post('/api/upload', function async(req, res) {
 
 
 
+const singleUpload = multerUpload.single('image');
 
-// test aws upload using cyclic
-const storage = multer.memoryStorage();
 
-const fileFilter = (req: Request, file: any, cb: Function) => {
-  if (file.mimetype.split('/')[0] === 'image') {
-    cb(null, true);
-  } else {
-    cb(new multer.MulterError('LIMIT_UNEXPECTED_FILE'), false);
+app.post('/api/s3', singleUpload, function async(req, res) {
+
+
+  if (!req.file) {
+    return res.status(400).json('No file added');
   }
-};
 
-const upload = multer({
-  storage,
-  fileFilter,
-  limits: { fileSize: 1000000000, files: 2 },
-});
+  console.log('request file: ', req.file);
 
-app.post('/api/s3upload', upload.array('file'), async (req, res) => {
   try {
 
-    let fName = '';
-
-    if (req.files && Array.isArray(req.files) && req.files.length > 0) {
-      fName = (req.files[0] as any).originalname;
-    }
+    return res.json({'imageUrl': req.file?.filename});
     
-    const title =  `uploads/${Date.now()}-${fName}`
-    const results = await s3Uploadv3(req.files as any, title);
-    console.log(results);
-
-    let file = await s3GetFile(title);
-
-    return res.json({ status: 'success', results, file });
-  } catch (err) {
-    res.status(400).send({ msg: 'could not upload file', err });
+  } catch (error) {
+    return res.status(400).json(error);
   }
-});
+})
+
+// test aws upload using cyclic
+// const storage = multer.memoryStorage();
+
+// const fileFilter = (req: Request, file: any, cb: Function) => {
+//   if (file.mimetype.split('/')[0] === 'image') {
+//     cb(null, true);
+//   } else {
+//     cb(new multer.MulterError('LIMIT_UNEXPECTED_FILE'), false);
+//   }
+// };
+
+// const upload = multer({
+//   storage,
+//   fileFilter,
+//   limits: { fileSize: 1000000000, files: 2 },
+// });
+
+// app.post('/api/s3upload', upload.array('file'), async (req, res) => {
+//   try {
+
+//     let fName = '';
+
+//     if (req.files && Array.isArray(req.files) && req.files.length > 0) {
+//       fName = (req.files[0] as any).originalname;
+//     }
+    
+//     const title =  `uploads/${Date.now()}-${fName}`
+//     const results = await s3Uploadv3(req.files as any, title);
+//     console.log(results);
+
+//     let file = await s3GetFile(title);
+
+//     return res.json({ status: 'success', results, file });
+//   } catch (err) {
+//     res.status(400).send({ msg: 'could not upload file', err });
+//   }
+// });
 
 export default app;
