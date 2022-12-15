@@ -15,7 +15,7 @@ import path from 'path';
 import fs from 'fs';
 
 import multer from 'multer';
-import { s3Uploadv3 } from './services/s3service';
+import { s3GetFile, s3Uploadv3 } from './services/s3service';
 
 const app = express();
 dotenv.config();
@@ -92,10 +92,20 @@ const upload = multer({
 
 app.post('/api/s3upload', upload.array('file'), async (req, res) => {
   try {
-    console.log('!!!!!!!! ok', req.files);
-    const results = await s3Uploadv3(req.files as any);
+
+    let fName = '';
+
+    if (req.files && Array.isArray(req.files) && req.files.length > 0) {
+      fName = (req.files[0] as any).originalname;
+    }
+    
+    const title =  `uploads/${Date.now()}-${fName}`
+    const results = await s3Uploadv3(req.files as any, title);
     console.log(results);
-    return res.json({ status: 'success', results });
+
+    let file = await s3GetFile(title);
+
+    return res.json({ status: 'success', results, file });
   } catch (err) {
     res.status(400).send({ msg: 'could not upload file', err });
   }
