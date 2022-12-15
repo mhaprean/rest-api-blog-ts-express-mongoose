@@ -95,7 +95,7 @@ app.post('/api/s3upload', upload.array('file'), async (req, res) => {
     console.log('!!!!!!!! ok', req.files);
     const results = await s3Uploadv3(req.files as any);
     console.log(results);
-    return res.json({ status: 'success' });
+    return res.json({ status: 'success', results });
   } catch (err) {
     res.status(400).send({ msg: 'could not upload file', err });
   }
