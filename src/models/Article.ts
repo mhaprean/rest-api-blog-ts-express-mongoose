@@ -5,11 +5,13 @@ export interface IArticle {
   title: string;
   description: string;
   image?: string;
+  imageThumb?: string;
   user: string;
   createdAt?: Date;
   updatedAt?: Date;
   tags: string[];
   category: string;
+  likes: string[];
 }
 
 export interface IArticleModel extends IArticle, Document {}
@@ -27,6 +29,9 @@ const articleSchema = new mongoose.Schema(
     image: {
       type: String,
     },
+    imageThumb: {
+      type: String,
+    },
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
@@ -35,6 +40,13 @@ const articleSchema = new mongoose.Schema(
       type: mongoose.Types.ObjectId,
       ref: 'Category',
     },
+    likes: [
+      {
+        type: mongoose.Types.ObjectId,
+        ref: 'User',
+        default: [],
+      },
+    ],
     tags: [
       {
         type: mongoose.Types.ObjectId,

@@ -81,21 +81,54 @@ export const deleteArticle = async (
   try {
     const article = await Article.findById(id);
 
-    if (article) {
-      const deleteFromTags = await Tag.updateMany(
-        { _id: article.tags },
-        { $pull: { articles: article._id } }
-      );
-
-      const deleteFromCategory = await Category.findOneAndUpdate(
-        { _id: article.category },
-        { $pull: { articles: article._id } }
-      );
+    if (!article) {
+      return res.status(400).json('Wrong article id.');
     }
 
-    await article?.remove();
+    const deleteFromTags = await Tag.updateMany(
+      { _id: article.tags },
+      { $pull: { articles: article._id } }
+    );
+
+    const deleteFromCategory = await Category.findOneAndUpdate(
+      { _id: article.category },
+      { $pull: { articles: article._id } }
+    );
+
+    await article.remove();
 
     return res.status(200).json(article);
+  } catch (error) {
+    return res.status(400).json(error);
+  }
+};
+
+export const likeArticle = async (
+  req: Request<{ id: string }>,
+  res: Response,
+  next: NextFunction
+) => {
+  const id = req.params.id;
+  const userId = req.userId;
+
+  try {
+    const article = await Article.findById(id);
+
+    if (!article) {
+      return res.status(400).json('Wrong article id.');
+    }
+    if (!userId) {
+      return res.status(400).json('You are not authenticated.');
+    }
+
+    if (article.likes.includes(userId)) {
+      const removeLike = await article.updateOne({ $ull: { likes: userId } });
+      return res.status(200).json({ article, removeLike });
+    } else {
+      const addLike = await article.updateOne({ $push: { likes: userId } });
+      return res.status(200).json({ article, addLike });
+    }
+
   } catch (error) {
     return res.status(400).json(error);
   }

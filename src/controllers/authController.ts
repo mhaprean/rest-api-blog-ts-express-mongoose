@@ -25,9 +25,13 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
 
     if (!isCorrect) return res.status(400).json('Wrong Credentials!');
 
-    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET || 'jwt_secret', {
-      expiresIn: '1d',
-    });
+    const token = jwt.sign(
+      { id: user.id, role: user.role || 'user' },
+      process.env.JWT_SECRET || 'jwt_secret',
+      {
+        expiresIn: '1d',
+      }
+    );
 
     return res
       .cookie('access_token', token, {

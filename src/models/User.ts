@@ -5,6 +5,7 @@ export interface IUser {
   email: string;
   password: string;
   image?: string;
+  imageThumb?: string;
   role: string;
   subscribers: number;
   subscribedUsers: string[];
@@ -32,6 +33,9 @@ const UserSchema = new mongoose.Schema(
       required: true,
     },
     image: {
+      type: String,
+    },
+    imageThumb: {
       type: String,
     },
     role: {
