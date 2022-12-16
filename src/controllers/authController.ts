@@ -1,7 +1,23 @@
-import User, { IUser } from '../models/User.js';
+import User, { IUser, IUserModel } from '../models/User.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
+
+const signJWTToken = (userId: string, role = 'user') => {
+  return jwt.sign({ id: userId, role: role }, process.env.JWT_SECRET || 'jwt_secret', {
+    expiresIn: '1d',
+  });
+};
+
+const signJWTRefreshToken = (userId: string, role = 'user') => {
+  return jwt.sign(
+    { id: userId, role: role },
+    process.env.JWT_REFRESH_SECRET || 'jwt_refresh_secret',
+    {
+      expiresIn: '2d',
+    }
+  );
+};
 
 export const register = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -25,16 +41,12 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
 
     if (!isCorrect) return res.status(400).json('Wrong Credentials!');
 
-    const token = jwt.sign(
-      { id: user.id, role: user.role || 'user' },
-      process.env.JWT_SECRET || 'jwt_secret',
-      {
-        expiresIn: '1d',
-      }
-    );
+    const token = signJWTToken(user.id, user.role);
+
+    const refreshToken = signJWTRefreshToken(user.id, user.role);
 
     return res
-      .cookie('access_token', token, {
+      .cookie('jwt_refresh_token', refreshToken, {
         httpOnly: true,
       })
       .status(200)
@@ -55,10 +67,39 @@ export const profile = async (req: Request, res: Response, next: NextFunction) =
   }
 };
 
+export const refreshToken = async (req: Request, res: Response, next: NextFunction) => {
+  const cookies = req.cookies;
+  if (!cookies?.jwt_refresh_token)
+    return res.sendStatus(401).json('No refresh token found. Please login again');
+
+  const existingToken = cookies.jwt_refresh_token as string;
+  res.clearCookie('jwt_refresh_token', { httpOnly: true });
+
+  jwt.verify(existingToken, process.env.JWT_REFRESH_SECRET || 'jwt_refresh_secret', (err, user) => {
+    // if the token expired or is not valid we set the http status to 401 Unauthorized
+    if (err) return res.status(401).json('Wrong or expired refresh token. Please login again');
+    if (user && typeof user !== 'string') {
+      if (user.id) {
+        const token = signJWTToken(user.id, user.role);
+
+        const refreshToken = signJWTRefreshToken(user.id, user.role);
+
+        return res
+          .cookie('jwt_refresh_token', refreshToken, {
+            httpOnly: true,
+          })
+          .status(200)
+          .json({ access_token: token });
+      }
+    }
+  });
+};
+
 const authController = {
   register,
   login,
   profile,
+  refreshToken,
 };
 
 export default authController;
