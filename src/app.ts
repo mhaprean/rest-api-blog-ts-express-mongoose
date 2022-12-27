@@ -11,12 +11,8 @@ import articleRoutes from './routes/articleRoutes';
 import fileUpload, { UploadedFile } from 'express-fileupload';
 import categoryRoutes from './routes/categoryRoutes';
 import tagRoutes from './routes/tagRoutes';
-import path from 'path';
-import fs from 'fs';
-
-import multer from 'multer';
-// import { s3GetFile, s3Uploadv3 } from './services/s3service';
-import { multerUpload } from './services/s3';
+import { Deta } from 'deta';
+import { isAuth } from './middleware/authMiddleware';
 
 const app = express();
 dotenv.config();
@@ -31,8 +27,8 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(cors());
 
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-// app.use(fileUpload());
+// app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use(fileUpload());
 
 // routes
 app.use('/api/auth', authRoutes);
@@ -45,91 +41,57 @@ app.get('/', (req, res) => {
   return res.send('welcome to blog rest api.');
 });
 
-// the image field must have the name "image"
-// this works fine on localhost but not on cyclic
-app.post('/api/upload', function async(req, res) {
+const deta = Deta(process.env.DETA_PROJECT_KEY);
+
+const drive = deta.Drive('images');
+
+const slugify = (text: string) => {
+  return text
+    .toString()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/[^\w-]+/g, '')
+    .replace(/--+/g, '-');
+};
+
+app.post('/api/upload', isAuth, async (req, res) => {
   if (!req.files || Object.keys(req.files).length === 0) {
-    return res.status(400).send('No files were uploaded.');
+    return res.status(400).json('No files were uploaded.');
   } // The name of the input field (i.e. "sampleFile") is used to retrieve the uploaded file
   let sampleFile = req.files.image as UploadedFile;
 
-  const dir = __dirname + '/uploads';
+  const whitelistMimeTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
 
-  // if the uploads folder does not exists, we need to create it
-  if (!fs.existsSync(dir)) {
-    fs.mkdir(dir, 0o777, (err) => {
-      console.log('could not create the folder: ', err);
-      res.status(500).send({ msg: 'could not create the folder', err });
-    });
+  if (!whitelistMimeTypes.includes(sampleFile.mimetype)) {
+    return res.status(400).json('Extension not allowed. try png, jpg, jpeg or webp');
   }
 
-  const fileName = '/uploads/' + Date.now() + '_' + sampleFile.name;
-  const uploadPath = __dirname + fileName; // Use the mv() method to place the file somewhere on your server
-  sampleFile.mv(uploadPath, function (err) {
-    if (err) return res.status(500).send(err);
-    res.send({ ok: 'File uploaded!', file: fileName });
-  });
+  const extension = sampleFile.mimetype.replace('image/', '');
+
+  const name = Date.now() + '_'  + slugify(sampleFile.name).slice(0,4) + '.' + extension;
+  const contents = sampleFile.data;
+
+  const img = await drive.put(name, { data: contents });
+  res.json('images/' + img);
 });
 
-
-
-const singleUpload = multerUpload.single('image');
-
-
-app.post('/api/s3', singleUpload, function async(req, res) {
-
-
-  if (!req.file) {
-    return res.status(400).json('No file added');
-  }
-
-  console.log('request file: ', req.file);
-
+app.get('/api/images/:name', async (req, res) => {
   try {
+    const name = req.params.name;
+    const image = await drive.get(name);
 
-    return res.json({'imageUrl': req.file?.filename});
-    
+    if (image) {
+      const buffer = await image.arrayBuffer();
+      res.contentType('image/png').send(Buffer.from(buffer));
+    } else {
+      res.status(400).json('image doesnt exist');
+    }
   } catch (error) {
-    return res.status(400).json(error);
+    return res.status(400).json('something went wrong');
   }
-})
-
-// test aws upload using cyclic
-// const storage = multer.memoryStorage();
-
-// const fileFilter = (req: Request, file: any, cb: Function) => {
-//   if (file.mimetype.split('/')[0] === 'image') {
-//     cb(null, true);
-//   } else {
-//     cb(new multer.MulterError('LIMIT_UNEXPECTED_FILE'), false);
-//   }
-// };
-
-// const upload = multer({
-//   storage,
-//   fileFilter,
-//   limits: { fileSize: 1000000000, files: 2 },
-// });
-
-// app.post('/api/s3upload', upload.array('file'), async (req, res) => {
-//   try {
-
-//     let fName = '';
-
-//     if (req.files && Array.isArray(req.files) && req.files.length > 0) {
-//       fName = (req.files[0] as any).originalname;
-//     }
-    
-//     const title =  `uploads/${Date.now()}-${fName}`
-//     const results = await s3Uploadv3(req.files as any, title);
-//     console.log(results);
-
-//     let file = await s3GetFile(title);
-
-//     return res.json({ status: 'success', results, file });
-//   } catch (err) {
-//     res.status(400).send({ msg: 'could not upload file', err });
-//   }
-// });
+});
 
 export default app;
