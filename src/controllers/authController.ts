@@ -70,7 +70,7 @@ export const profile = async (req: Request, res: Response, next: NextFunction) =
 export const refreshToken = async (req: Request, res: Response, next: NextFunction) => {
   const cookies = req.cookies;
   if (!cookies?.jwt_refresh_token)
-    return res.sendStatus(401).json('No refresh token found. Please login again');
+    return res.status(401).json('No refresh token found. Please login again');
 
   const existingToken = cookies.jwt_refresh_token as string;
   res.clearCookie('jwt_refresh_token', { httpOnly: true });
@@ -82,12 +82,12 @@ export const refreshToken = async (req: Request, res: Response, next: NextFuncti
       if (user.id) {
         const token = signJWTToken(user.id, user.role);
 
-        const refreshToken = signJWTRefreshToken(user.id, user.role);
+        // const refreshToken = signJWTRefreshToken(user.id, user.role);
 
-        return res
-          .cookie('jwt_refresh_token', refreshToken, {
-            httpOnly: true,
-          })
+        return res.clearCookie('jwt_refresh_token', { httpOnly: true })
+          // .cookie('jwt_refresh_token', refreshToken, {
+          //   httpOnly: true,
+          // })
           .status(200)
           .json({ access_token: token });
       }

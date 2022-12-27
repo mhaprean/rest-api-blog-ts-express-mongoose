@@ -12,6 +12,7 @@ export interface IArticle {
   tags: string[];
   category: string;
   likes: string[];
+  _doc: Omit<this,'_doc'>; // try to do this in order to acces the _doc object
 }
 
 export interface IArticleModel extends IArticle, Document {}

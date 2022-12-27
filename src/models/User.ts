@@ -14,6 +14,7 @@ export interface IUser {
   updatedAt: Date;
 }
 
+// export type IUserModel = IUser & Document;
 export interface IUserModel extends IUser, Document {}
 
 const UserSchema = new mongoose.Schema(

@@ -11,6 +11,6 @@ router.post('/login', login);
 router.get('/profile', isAuth, profile);
 
 // refresh the acces token when expired
-router.get('/refresh', refreshToken);
+router.post('/refresh', refreshToken);
 
 export default router;
