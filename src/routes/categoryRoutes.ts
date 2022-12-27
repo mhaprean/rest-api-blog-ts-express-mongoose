@@ -1,6 +1,6 @@
 import express from 'express';
-import { getCategories, getCategoryById, createCategory } from '../controllers/categoryController';
-import { isAuth } from '../middleware/authMiddleware';
+import { getCategories, getCategoryById, createCategory, getCategoryArticles } from '../controllers/categoryController';
+import { isAdmin, isAuth } from '../middleware/authMiddleware';
 
 const router = express.Router();
 
@@ -11,8 +11,11 @@ router.get('/', getCategories);
 // get single category 
 router.get('/:id', getCategoryById);
 
+
+router.get('/:id/articles', getCategoryArticles);
+
 // add category
-router.post('/', isAuth, createCategory);
+router.post('/', [isAuth, isAdmin], createCategory);
 
 
 export default router;

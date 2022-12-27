@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import Category, { ICategory } from '../models/Category';
 import Joi from 'joi';
+import Article from '../models/Article';
 
 export const getCategories = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -54,4 +55,23 @@ export const createCategory = async (
   } catch (error) {
     return res.status(400).json(error);
   }
+};
+
+export const getCategoryArticles = async (
+  req: Request<{ id: string }>,
+  res: Response,
+  next: NextFunction
+) => {
+  const id = req.params.id;
+
+  try {
+    const articles = await Article.find({
+      category: id,
+    }).populate([
+      { path: 'category', select: '_id title' },
+      { path: 'user', select: ['_id', 'name', 'image'] },
+      { path: 'tags', select: '_id title' },
+    ]);
+    return res.status(200).json(articles);
+  } catch (error) {}
 };

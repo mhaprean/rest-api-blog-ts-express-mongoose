@@ -11,7 +11,7 @@ router.get('/', getTags);
 // get single tag 
 router.get('/:id', getTagById);
 
-// add category
+// add tag
 router.post('/', isAuth, createTag);
 
 
