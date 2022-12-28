@@ -58,20 +58,32 @@ export const createCategory = async (
 };
 
 export const getCategoryArticles = async (
-  req: Request<{ id: string }>,
+  req: Request<{ id: string }, {}, {}, { page?: number; limit?: number }>,
   res: Response,
   next: NextFunction
 ) => {
   const id = req.params.id;
 
+  const { page = 1, limit = 10 } = req.query;
+
   try {
     const articles = await Article.find({
       category: id,
-    }).populate([
-      { path: 'category', select: '_id title' },
-      { path: 'user', select: ['_id', 'name', 'image'] },
-      { path: 'tags', select: '_id title' },
-    ]);
-    return res.status(200).json(articles);
+    })
+      .sort('-updatedAt')
+      .limit(limit * 1)
+      .skip((page - 1) * limit)
+      .populate([
+        { path: 'category', select: '_id title' },
+        { path: 'user', select: ['_id', 'name', 'image'] },
+        { path: 'tags', select: '_id title' },
+      ]);
+
+    const total = await Article.find({ category: id }).countDocuments();
+    return res.status(200).json({
+      articles,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+    });
   } catch (error) {}
 };

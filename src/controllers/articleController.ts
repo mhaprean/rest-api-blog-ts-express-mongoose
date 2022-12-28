@@ -4,11 +4,25 @@ import Tag from '../models/Tag';
 import Category from '../models/Category';
 import Joi from 'joi';
 
-export const getArticles = async (req: Request, res: Response, next: NextFunction) => {
+export const getArticles = async (
+  req: Request<{}, {}, {}, { page?: number; limit?: number }>,
+  res: Response,
+  next: NextFunction
+) => {
+  const { page = 1, limit = 10 } = req.query;
   try {
-    const articles = await Article.find().populate('user', 'name subscribers');
+    const articles = await Article.find().sort('-updatedAt')
+      .limit(limit * 1)
+      .skip((page - 1) * limit)
+      .populate('user', 'name subscribers');
 
-    return res.status(200).json(articles);
+    const total = await Article.find().countDocuments();
+
+    return res.status(200).json({
+      articles,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+    });
   } catch (error) {
     return res.status(400).json(error);
   }
@@ -123,10 +137,10 @@ export const likeArticle = async (
 
     if (article.likes.includes(userId)) {
       const removeLike = await article.updateOne({ $pull: { likes: userId } });
-      return res.status(200).json("Like removed from article");
+      return res.status(200).json('Like removed from article');
     } else {
       const addLike = await article.updateOne({ $push: { likes: userId } });
-      return res.status(200).json("Like added to article");
+      return res.status(200).json('Like added to article');
     }
   } catch (error) {
     return res.status(400).json(error);
@@ -144,7 +158,6 @@ const difference = (arrA: string[], arrB: string[]) => {
 
   return result;
 };
-
 
 export const updateArticle = async (
   req: Request<{ id: string }>,
@@ -182,15 +195,7 @@ export const updateArticle = async (
       return res.status(400).send(error);
     }
 
-    const {
-      title,
-      description,
-      tags,
-      category,
-      image,
-      imageThumb,
-      user,
-    } = req.body;
+    const { title, description, tags, category, image, imageThumb, user } = req.body;
     const newArticle = { title, description, user, tags, category, image, imageThumb };
 
     Object.assign(oldArticle, newArticle);
@@ -211,7 +216,6 @@ export const updateArticle = async (
     );
 
     if (oldCategory !== newArticle.category) {
-
       const removeArticleFromOldCategory = await Category.findByIdAndUpdate(oldCategory, {
         $pull: { articles: updatedArticle._id },
       });
