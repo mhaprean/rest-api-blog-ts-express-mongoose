@@ -11,11 +11,15 @@ export const getArticles = async (
 ) => {
   const { page = 1, limit = 10 } = req.query;
   try {
-    const articles = await Article.find().sort('-updatedAt')
+    const articles = await Article.find()
+      .sort('-updatedAt')
       .limit(limit * 1)
       .skip((page - 1) * limit)
-      .populate('user', 'name subscribers');
-
+      .populate([
+        { path: 'category', select: '_id title' },
+        { path: 'user', select: ['_id', 'name', 'image'] },
+        { path: 'tags', select: ['_id', 'title']}
+      ]);
     const total = await Article.find().countDocuments();
 
     return res.status(200).json({
